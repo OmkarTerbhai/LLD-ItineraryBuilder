@@ -1,4 +1,7 @@
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class Itinerary {
 
@@ -8,8 +11,11 @@ public class Itinerary {
     private Date startDate;
     private Date endDate;
     private double budget;
+    private List<Segment> segments;
 
     private Itinerary(ItineraryBuilder builder) {
+        validateSegments(builder.segments);
+        this.segments = new ArrayList<>(segments);
         this.travellerName = builder.travellerName;
         this.origin = builder.origin;
         this.destination = builder.destination;
@@ -17,6 +23,23 @@ public class Itinerary {
         this.endDate = builder.endDate;
         this.budget = builder.budget;
     }
+
+    private void validateSegments(List<Segment> segments) {
+        List<Date> departureDates = segments.stream().map(Segment::departAt).toList();
+
+        for(int i = 0; i < segments.size()-1; i++) {
+            if(departureDates.get(i).after(departureDates.get(i+1))) {
+                throw new IllegalArgumentException("Departure date should be in increasing order");
+            }
+            else if(segments.get(i).to().equals(segments.get(i+1).from())) {
+                throw new IllegalArgumentException("Departure date should be in increasing order");
+            }
+            else if(segments.get(i).departAt().after(segments.get(i+1).arriveAt())) {
+                throw new IllegalArgumentException("Cannot depart after arrival time at next segment");
+            }
+        }
+    }
+
     public static ItineraryBuilder builder() {
         return new ItineraryBuilder();
     }
@@ -33,8 +56,10 @@ public class Itinerary {
                 '}';
     }
 
-    static class ItineraryBuilder {
-        public ItineraryBuilder() {}
+     static class ItineraryBuilder {
+        public ItineraryBuilder() {
+            segments = new ArrayList<>();
+        }
 
 
 
@@ -44,6 +69,7 @@ public class Itinerary {
         private Date startDate;
         private Date endDate;
         private double budget;
+        private List<Segment> segments;
 
         public ItineraryBuilder travellerName(String name) {
             if(name != null && !name.isEmpty())
@@ -96,6 +122,21 @@ public class Itinerary {
             }
             else
                 throw new IllegalArgumentException("Budget cannot be zero");
+            return this;
+        }
+
+        public ItineraryBuilder addSegment(Segment... segments) {
+            for(Segment seg : segments) {
+                if(seg.from() != null && !seg.from().isEmpty() &&
+                        seg.to() != null && !seg.to().isEmpty() &&
+                        seg.arriveAt() != null && seg.departAt() != null) {
+
+                    this.segments.add(seg);
+                }
+                else
+                    throw new IllegalArgumentException("All fields is a travel segment are mandatory");
+            }
+
             return this;
         }
 
